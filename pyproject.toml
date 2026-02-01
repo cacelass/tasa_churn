@@ -1,0 +1,48 @@
+[project]
+name = "tasa_churn"
+version = "0.1.0"
+description = "A short description of the project."
+authors = [
+  { name = "Alejandro Cancelas Chapela" }
+]
+readme = "README.md"
+requires-python = ">= 3.12"
+license = { text = "" }
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "plotly",
+    "jupyter",
+    "jupyterlab",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "invoke",
+    "nbdime",
+    "pylint",
+]
+
+ml = [
+    "scikit-learn",
+    "keras",
+    "tensorflow",
+    "lightgbm",
+    "statsmodels",
+    "pyjanitor",
+    "pandas-flavor",
+    "pandas-profiling",
+    "pyspark",
+    "python-dotenv",
+    "missingno",
+]
+
+[tool.setuptools]
+packages = ["tasa_churn"]
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
