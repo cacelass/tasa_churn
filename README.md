@@ -50,11 +50,8 @@ Contamos con información histórica sobre clientes, incluyendo:
 
 3. **Prepara los datos:**
    
-   Coloca tu archivo de datos de entrenamiento en la carpeta `data/raw/` con el nombre:
-   ```
-   data/raw/customer_churn_dataset-training-master.csv
-   ```
-   
+   Coloca tu archivo de datos de entrenamiento en la carpeta `data/raw/`.
+
    El archivo debe contener la columna `Churn` con los valores objetivo (0 = no abandona, 1 = abandona).
 
 ### Ejecución
@@ -205,8 +202,13 @@ Después de evaluar varios algoritmos (Logistic Regression, Random Forest, XGBoo
 | **F1-Score** | 0.68   | Balance entre precisión y recall. |
 | **AUC-ROC** | 0.84   | Capacidad de distinción entre clases. |
 
-> **Nota:** Se priorizó el **Recall** para asegurar que el departamento de retención identifique a la mayor cantidad posible de clientes en riesgo.
+### Insights del modelo:
 
+Las variables más importantes según el modelo son: tenure, payment_delay y subscription_type. Esto indica que la antigüedad y los retrasos en pagos son los factores más determinantes para churn.
+
+Clientes con pagos atrasados frecuentes y contratos más cortos tienen mayor riesgo de abandonar.
+
+Este análisis permite priorizar estrategias de retención, enfocándose en clientes con alto riesgo según estas variables clave.
 ### Visualización Clave
 ![Análisis de Importancia de Variables y Resultados](data/processed/image.png)
 ---
