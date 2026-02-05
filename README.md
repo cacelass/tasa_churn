@@ -206,6 +206,9 @@ Después de evaluar varios algoritmos (Logistic Regression, Random Forest, XGBoo
 | **AUC-ROC** | 0.84   | Capacidad de distinción entre clases. |
 
 > **Nota:** Se priorizó el **Recall** para asegurar que el departamento de retención identifique a la mayor cantidad posible de clientes en riesgo.
+
+### Visualización Clave
+![Análisis de Importancia de Variables y Resultados](data/processed/image.png)
 ---
 
 ## Pipeline del proyecto
