@@ -24,8 +24,7 @@ def preprocess_data(df, target_col='y', save_artifacts=True):
     df.drop(columns=['Last Interaction'], inplace=True)
     # Borrar total spend El gasto total está muy correlacionado con la duración del contrato (tenure). El modelo puede aprender esta relación en lugar de aprender patrones reales relacionados con el churn.
     df.drop(columns=['Total Spend'], inplace=True)
-    # Borrar el target de el dataset de test
-    df.drop(columns=['Churn'], inplace=True)
+
 
     # Separar X e y
     if target_col in df.columns:
@@ -41,22 +40,20 @@ def preprocess_data(df, target_col='y', save_artifacts=True):
         joblib.dump(X.columns.tolist(), ARTIFACTS_DIR / "columns.joblib")
 
    # 2. Categóricas
-    labelencoder_X = LabelEncoder()
+    # LabelEncoder solo para Gender
+    labelencoder_gender = LabelEncoder()
+    X['Gender'] = labelencoder_gender.fit_transform(X['Gender'])
 
-    # -------------------------- Preparación train -------------------------
-    df['Gender'] = (df['Gender'].str.upper())
-
-    df['Gender'] = labelencoder_X.fit_transform(df['Gender'])
-
-    df['Subscription Type'] = (df['Subscription Type'].str.upper().map({'BASIC': 0, 'STANDARD': 1, 'PREMIUM': 2}))
-
-    df['Contract Length'] = (df['Contract Length'].str.upper().map({'MONTHLY': 0, 'QUARTERLY': 1, 'ANNUAL': 2}))
+    # Mapear otras categóricas
+    X['Subscription Type'] = X['Subscription Type'].str.title().map({'Basic':0, 'Standard':1, 'Premium':2})
+    X['Contract Length']   = X['Contract Length'].str.title().map({'Monthly':0, 'Quarterly':1, 'Annual':2})
 
     if save_artifacts:
+        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         encoders = {
-            "Gender": labelencoder_X,
-            "Subscription Type": {'BASIC': 0, 'STANDARD': 1, 'PREMIUM': 2},
-            "Contract Length": {'MONTHLY': 0, 'QUARTERLY': 1, 'ANNUAL': 2}
+            "Gender": labelencoder_gender,
+            "Subscription Type": {'Basic': 0, 'Standard': 1, 'Premium': 2},
+            "Contract Length": {'Monthly': 0, 'Quarterly': 1, 'Annual': 2}
         }
         joblib.dump(encoders, ARTIFACTS_DIR / "encoders.joblib")
 
@@ -90,23 +87,40 @@ def process_input(user_data):
     except FileNotFoundError:
         raise Exception("No se encontraron los archivos de entrenamiento. Entrena el modelo primero.")
 
-    # 2. Crear DataFrame con las columnas correctas
-    df = pd.DataFrame([user_data])
+    # 2. Crear DataFrame vacío con las columnas correctas
+    df = pd.DataFrame(columns=columns)
     
-    # Asegurar que el orden de columnas es el mismo que en el entrenamiento
-    df = df[columns]
+    # 3. Llenar el DataFrame con los datos del usuario
+    for col in columns:
+        if col in user_data:
+            df.loc[0, col] = user_data[col]
+        else:
+            raise ValueError(f"Falta la columna requerida: {col}")
 
-    # 3. Aplicar Encoders (Categorías)
-    for col, le in encoders.items():
-        # Manejo básico de errores si el usuario pone algo desconocido
-        try:
-            df[col] = le.transform(df[col].astype(str))
-        except ValueError:
-            # Si el valor no existe (ej: Trabajo='Youtuber'), asignamos un valor por defecto o fallamos
-            print(f"Advertencia: El valor '{df[col].iloc[0]}' en '{col}' no se vio en el entrenamiento.")
-            df[col] = 0 # Asignamos 0 por defecto (o podrías lanzar error)
+    # 4. Aplicar encoders solo a columnas categóricas
+    # Gender
+    if 'Gender' in df.columns and 'Gender' in encoders:
+        gender_encoder = encoders['Gender']
+        df['Gender'] = gender_encoder.transform(df['Gender'].astype(str))
+    
+    # Subscription Type
+    if 'Subscription Type' in df.columns and 'Subscription Type' in encoders:
+        sub_map = encoders['Subscription Type']
+        df['Subscription Type'] = df['Subscription Type'].astype(str).str.title().map(sub_map)
+        if df['Subscription Type'].isna().any():
+            df['Subscription Type'] = 0
+    
+    # Contract Length
+    if 'Contract Length' in df.columns and 'Contract Length' in encoders:
+        contract_map = encoders['Contract Length']
+        df['Contract Length'] = df['Contract Length'].astype(str).str.title().map(contract_map)
+        if df['Contract Length'].isna().any():
+            df['Contract Length'] = 0
 
-    # 4. Aplicar Scaler (Numéricos)
+    # 5. Convertir todo a numérico
+    df = df.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    # 6. Aplicar scaler
     df_scaled = scaler.transform(df)
     
     return df_scaled
