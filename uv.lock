@@ -2958,6 +2958,7 @@ dev = [
     { name = "invoke" },
     { name = "nbdime" },
     { name = "pylint" },
+    { name = "pytest" },
 ]
 ml = [
     { name = "keras" },
@@ -2991,6 +2992,7 @@ requires-dist = [
     { name = "pylint", marker = "extra == 'dev'" },
     { name = "pyspark", marker = "extra == 'ml'" },
     { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest", marker = "extra == 'dev'" },
     { name = "python-dotenv", marker = "extra == 'ml'" },
     { name = "scikit-learn", marker = "extra == 'ml'" },
     { name = "seaborn" },

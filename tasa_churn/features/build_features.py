@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from tasa_churn.utils.paths import ARTIFACTS_DIR
 
-def preprocess_data(df, target_col='y', save_artifacts=True):
+def preprocess_data(df, target_col='Churn', save_artifacts=True):
     """
     Procesa los datos para entrenamiento y guarda los codificadores.
         - Limpieza: elimina duplicados, nulos y columnas irrelevantes.
@@ -43,23 +43,25 @@ def preprocess_data(df, target_col='y', save_artifacts=True):
         joblib.dump(X.columns.tolist(), ARTIFACTS_DIR / "columns.joblib")
 
    # 2. Categóricas
-    # LabelEncoder solo para Gender
-    labelencoder_gender = LabelEncoder()
-    X['Gender'] = labelencoder_gender.fit_transform(X['Gender'])
+    # LabelEncoder para Gender
+    le_gender = LabelEncoder()
+    X['Gender'] = le_gender.fit_transform(X['Gender'])
 
-    # Mapear otras categóricas
-    X['Subscription Type'] = X['Subscription Type'].str.title().map({'Basic':0, 'Standard':1, 'Premium':2})
-    X['Contract Length']   = X['Contract Length'].str.title().map({'Monthly':0, 'Quarterly':1, 'Annual':2})
+    # Diccionarios para otras categóricas
+    sub_type_map = {'Basic':0, 'Standard':1, 'Premium':2}
+    contract_map = {'Monthly':0, 'Quarterly':1, 'Annual':2}
 
+    X['Subscription Type'] = X['Subscription Type'].str.title().map(sub_type_map)
+    X['Contract Length'] = X['Contract Length'].str.title().map(contract_map)
+
+    # Guardar encoders y diccionarios
     if save_artifacts:
-        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         encoders = {
-            "Gender": labelencoder_gender,
-            "Subscription Type": {'Basic': 0, 'Standard': 1, 'Premium': 2},
-            "Contract Length": {'Monthly': 0, 'Quarterly': 1, 'Annual': 2}
+            "Gender": le_gender,
+            "Subscription Type": sub_type_map,
+            "Contract Length": contract_map
         }
         joblib.dump(encoders, ARTIFACTS_DIR / "encoders.joblib")
-
     # 3. Escalado
     scaler = MinMaxScaler()
     X_scaled = pd.DataFrame(
