@@ -104,7 +104,7 @@ def process_input(user_data):
             df.loc[0, col] = user_data[col]
         else:
             raise ValueError(f"Falta la columna requerida: {col}")
-
+        
     # 4. Aplicar encoders solo a columnas categóricas
     # Gender
     if 'Gender' in df.columns and 'Gender' in encoders:

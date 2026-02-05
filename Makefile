@@ -14,5 +14,4 @@ docs:
 	make html -C docs
 
 clean:
-	rm -rf .pytest_cache docs/build
-	find tasa_churn tests -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf models/*
