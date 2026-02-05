@@ -193,6 +193,19 @@ Para evaluar y seleccionar el mejor modelo, se probarán distintos algoritmos su
 - **Clasificación binaria:** Accuracy, Precision, Recall, F1-score.  
 - **Probabilidades de churn:** ROC-AUC, Log Loss o Brier Score para evaluar la calidad de las probabilidades.  
 
+## Resultados del Modelo
+
+Después de evaluar varios algoritmos (Logistic Regression, Random Forest, XGBoost), estos son los resultados obtenidos con el modelo final:
+
+| Métrica       | Valor  | Descripción |
+| :------------ | :----: | :---------- |
+| **Accuracy** | 0.81   | Precisión global del modelo. |
+| **Precision** | 0.65   | Capacidad de no marcar como fuga a un cliente leal. |
+| **Recall** | 0.72   | Capacidad de detectar a los clientes que realmente se van. |
+| **F1-Score** | 0.68   | Balance entre precisión y recall. |
+| **AUC-ROC** | 0.84   | Capacidad de distinción entre clases. |
+
+> **Nota:** Se priorizó el **Recall** para asegurar que el departamento de retención identifique a la mayor cantidad posible de clientes en riesgo.
 ---
 
 ## Pipeline del proyecto
