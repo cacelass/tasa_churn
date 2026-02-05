@@ -8,6 +8,9 @@ from tasa_churn.utils.paths import ARTIFACTS_DIR
 def preprocess_data(df, target_col='y', save_artifacts=True):
     """
     Procesa los datos para entrenamiento y guarda los codificadores.
+        - Limpieza: elimina duplicados, nulos y columnas irrelevantes.
+        - Codificación: LabelEncoder para Gender, mapeo para Subscription Type y Contract Length.
+        - Escalado: MinMaxScaler para todas las columnas numéricas.
     """
     print("--> Preprocesando datos de entrenamiento...")
     
@@ -78,6 +81,11 @@ def process_input(user_data):
     """
     Toma un diccionario con los datos del usuario y los transforma
     usando los artefactos guardados.
+        - Carga columnas, encoders y scaler.
+        - Crea un DataFrame con los datos del usuario.
+        - Aplica las mismas transformaciones que al entrenamiento.
+        - Devuelve un array listo para predecir.
+        user_data: dict con claves como  'Gender', 'Age', 'Subscription Type', etc.
     """
     # 1. Cargar artefactos
     try:

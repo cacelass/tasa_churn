@@ -4,7 +4,13 @@ from sklearn.ensemble import RandomForestClassifier
 
 def train_models(X_train, y_train):
     """
-    Entrena múltiples modelos y los guarda en disco.
+    Entrena los modelos y guarda los artefactos.
+     - Random Forest con parámetros específicos para evitar overfitting.
+     - Guarda cada modelo entrenado en la carpeta models.
+     - Devuelve un diccionario con los modelos entrenados.
+     - X_train: DataFrame con las características de entrenamiento.
+     - y_train: Serie con las etiquetas de entrenamiento.
+     - return: dict con modelos entrenados, e.g. {'RandomForest': model_object}
     """
     print("--> Entrenando modelos...")
     models = {}

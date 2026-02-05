@@ -16,6 +16,7 @@ dependencies = [
     "plotly",
     "jupyter",
     "jupyterlab",
+    "sphinx",
 ]
 
 [project.optional-dependencies]
