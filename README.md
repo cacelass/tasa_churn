@@ -164,7 +164,7 @@ tasa_churn/
 │   └── visualization/
 │       └── visualize.py             # Visualizaciones
 │
-├── main.py                          # 🚀 Punto de entrada principal
+├── main.py                          # Punto de entrada principal
 ├── pyproject.toml                   # Dependencias del proyecto
 ├── setup.py                         # Configuración de instalación
 └── README.md                        # Este archivo
