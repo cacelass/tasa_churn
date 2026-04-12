@@ -1,126 +1,126 @@
-# Churn Prediction 
+# RETAINML
 
-Proyecto para **predecir la probabilidad de abandono de clientes** (tasa de churn) usando técnicas de **Machine Learning supervisado**. El objetivo es identificar clientes con riesgo de abandonar y tomar acciones preventivas para mejorar la retención.
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Licencia](https://img.shields.io/badge/licencia-MIT-green)
+![Último commit](https://img.shields.io/github/last-commit/cacelass/retainml)
+
+Sistema de machine learning supervisado que predice la probabilidad de abandono
+de un cliente. A partir de datos históricos sobre demografía, patrones de uso e
+interacciones con el servicio, el modelo devuelve una puntuación de riesgo y una
+etiqueta binaria para que los equipos de retención puedan priorizar a los
+clientes en riesgo antes de que se marchen.
 
 ---
 
 ## Descripción del problema
 
-En muchos negocios, el **abandono de clientes** tiene un impacto directo en los ingresos y en la estabilidad del negocio. La tasa de churn mide el porcentaje de clientes que dejan de usar el servicio durante un periodo determinado.
+El abandono de clientes erosiona directamente los ingresos y eleva los costes de
+adquisición. El objetivo es aprender de registros históricos etiquetados —
+clientes que permanecieron (churn = 0) o se fueron (churn = 1) — y generalizar
+a nuevos clientes no vistos.
 
-El desafío consiste en predecir, a partir de datos históricos y de comportamiento del cliente:
+El sistema predice dos cosas:
 
-- Si un cliente es probable que abandone (churn = 1) o permanezca (churn = 0).  
-- La **probabilidad de abandono** para cada cliente, no solo una predicción binaria.  
+- Una etiqueta binaria: ¿abandonará este cliente?
+- Una probabilidad: ¿con qué confianza lo afirma el modelo?
 
-Contamos con información histórica sobre clientes, incluyendo:
+Las variables de entrada cubren tres dominios:
 
-- Datos demográficos: edad, género, segmento, antigüedad.  
-- Datos de uso: frecuencia de compra/uso, tickets promedio, productos contratados.  
-- Interacciones con el servicio: quejas, llamadas a soporte, pagos atrasados.
+- **Demografía** — edad, género, segmento de cliente, antigüedad.
+- **Uso** — frecuencia de compra, gasto medio, número de productos activos.
+- **Interacciones con el servicio** — llamadas a soporte, reclamaciones, retrasos en pagos.
+
+---
+
+## Resultados
+
+| Métrica | Valor | Descripción |
+|---|---|---|
+| Accuracy | 0.81 | Porcentaje global de clasificaciones correctas |
+| Precision | 0.65 | Evita marcar como fuga a clientes leales |
+| Recall | 0.72 | Detecta la mayoría de los clientes que realmente se van |
+| F1-Score | 0.68 | Media armónica entre precision y recall |
+| AUC-ROC | **0.84** | Mejor indicador global de calidad del modelo |
+
+Las tres variables más predictivas son **tenure**, **payment_delay** y
+**subscription_type**. Los clientes con retrasos de pago frecuentes y contratos
+más cortos presentan mayor riesgo de abandono, lo que se alinea con la intuición
+de negocio.
+
+![Importancia de variables y resultados](data/processed/image.png)
 
 ---
 
 ## Inicio rápido
 
-### Prerequisitos
+### Prerrequisitos
 
-- **Python ≥ 3.11**
-- **pip** o **uv** para gestión de dependencias
+- Python 3.11 o superior
+- `pip` o `uv`
 
 ### Instalación
 
-1. **Clona el repositorio:**
-   ```bash
-   git clone https://github.com/cacelass/tasa_churn
-   cd tasa_churn
-   ```
+```bash
+git clone https://github.com/cacelass/tasa_churn
+cd tasa_churn
+pip install -e .
+```
 
-2. **Instala las dependencias:**
-   
-   Con `pip`:
-   ```bash
-   pip install -e .
-   ```
-   
-   O con `uv` (recomendado):
-   ```bash
-   make setup
-   ```
+Con `uv` (más rápido):
 
-3. **Prepara los datos:**
-   
-   Coloca tu archivo de datos de entrenamiento en la carpeta `data/raw/`.
-
-   El archivo debe contener la columna `Churn` con los valores objetivo (0 = no abandona, 1 = abandona).
+```bash
+make setup
+```
 
 ### Ejecución
-
-**Ejecuta el programa principal:**
 
 ```bash
 python main.py
 ```
 
-El programa realizará automáticamente:
+En la primera ejecución el modelo se entrena automáticamente. Las ejecuciones
+posteriores omiten el entrenamiento y cargan el modelo guardado directamente.
 
-1. **Entrenamiento inicial** (solo la primera vez):
-   - Carga los datos desde `data/raw/`
-   - Preprocesa las características (encoding y escalado)
-   - Entrena múltiples modelos (RandomForest, LogisticRegression, etc.)
-   - Guarda el mejor modelo en `models/`
-   - Guarda los artefactos necesarios (encoders, scaler) en `models/artifacts/`
+### Ejemplo de sesión
 
-2. **Modo predicción** (en ejecuciones posteriores):
-   - Carga el modelo ya entrenado
-   - Solicita datos del cliente de forma interactiva
-   - Valida que los datos sean correctos
-   - Predice la probabilidad de churn
-   - Permite evaluar múltiples clientes en la misma sesión
+```
+INFO | Modelo encontrado. Omitiendo entrenamiento.
+INFO | Modelo cargado: RandomForest.joblib
 
-### Ejemplo de uso
+==========================================
+   PREDICCION DE RIESGO DE CHURN
+==========================================
 
-```bash
-$ python main.py
+  AGE
+  > 35
 
->>> Modelo no encontrado. Iniciando entrenamiento...
---> Preprocesando datos de entrenamiento...
->>> Entrenamiento finalizado.
+  GENDER
+  Opciones: Female, Male
+  > Male
 
-========================================
-   RIESGO DE CHURN - PREDICCIÓN
-========================================
+  TENURE
+  > 24
 
-🔹 Dato: AGE
-     Introduce un número: 35
+  SUBSCRIPTION TYPE
+  Opciones: Basic, Standard, Premium
+  > Premium
 
-🔹 Dato: GENDER
-   Opciones válidas: Female, Male
-     Escribe una opción: Male
+  CONTRACT LENGTH
+  Opciones: Monthly, Quarterly, Annual
+  > Annual
 
-🔹 Dato: TENURE
-     Introduce un número: 24
+  SUPPORT CALLS
+  > 2
 
-🔹 Dato: SUBSCRIPTION TYPE
-   Opciones válidas: Basic, Standard, Premium
-     Escribe una opción: Premium
+  PAYMENT DELAY
+  > 0
 
-🔹 Dato: CONTRACT LENGTH
-   Opciones válidas: Monthly, Quarterly, Annual
-     Escribe una opción: Annual
-
-🔹 Dato: SUPPORT CALLS
-     Introduce un número: 2
-
-🔹 Dato: PAYMENT DELAY
-     Introduce un número: 0
-
-------------------------------
-Cliente estable (Riesgo bajo - Confianza NO churn: 87.3%)
-------------------------------
+------------------------------------------
+  RIESGO BAJO — cliente estable  (confianza: 87.3%)
+------------------------------------------
 
 ¿Evaluar otro cliente? (s/n): n
-Cerrando programa...
+INFO | Sesion cerrada.
 ```
 
 ---
@@ -129,104 +129,97 @@ Cerrando programa...
 
 ```
 tasa_churn/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # Pipeline de CI con GitHub Actions
 ├── data/
-│   ├── raw/                          # Datos originales sin modificar
-│   │   ├── customer_churn_dataset-training-master.csv
-│   │   └── customer_churn_dataset-testing-master.csv
-│   ├── interim/                      # Datos intermedios transformados
-│   ├── processed/                    # Datos finales para modelos
-│   └── external/                     # Datos de fuentes externas
-│
-├── models/                           # Modelos y artefactos
-│   ├── RandomForest.joblib          # Modelo entrenado
-│   └── artifacts/                    # Encoders, scalers y configuración
-│       ├── encoders.joblib
-│       ├── scaler.joblib
-│       └── columns.joblib
-│
-├── notebooks/                        # Jupyter notebooks para exploración
-│
-├── reports/                          # Reportes y visualizaciones
-│   └── figures/
-│
-├── tests/                            # Tests unitarios
-│
-├── tasa_churn/                       # Código fuente del proyecto
+│   ├── raw/                      # Datos originales sin modificar
+│   ├── interim/                  # Datos intermedios transformados
+│   ├── processed/                # Datos finales listos para modelar
+│   └── external/                 # Datos de fuentes externas
+├── models/
+│   ├── best_model.txt            # Nombre del mejor modelo del último entrenamiento
+│   ├── RandomForest.joblib       # Ejemplo de modelo entrenado
+│   └── artifacts/
+│       ├── encoders.joblib       # Encoders ajustados
+│       ├── scaler.joblib         # Scaler ajustado
+│       └── columns.joblib        # Orden de columnas del entrenamiento
+├── notebooks/                    # Análisis exploratorio y experimentos
+├── reports/
+│   └── figures/                  # Gráficos y visualizaciones generadas
+├── tests/
+│   └── test_smoke.py             # Comprobaciones de importación y rutas
+├── tasa_churn/                   # Paquete principal
 │   ├── data/
-│   │   └── make_dataset.py          # Carga de datos
+│   │   └── make_dataset.py       # Carga de datos
 │   ├── features/
-│   │   └── build_features.py        # Preprocesamiento y transformación
+│   │   └── build_features.py     # Preprocesamiento e ingeniería de variables
 │   ├── models/
-│   │   ├── train_model.py           # Entrenamiento de modelos
-│   │   └── predict_model.py         # Evaluación y predicción
+│   │   ├── train_model.py        # Bucle de entrenamiento y comparación de modelos
+│   │   └── predict_model.py      # Evaluación e inferencia
 │   ├── utils/
-│   │   └── paths.py                 # Gestión de rutas
+│   │   └── paths.py              # Definición centralizada de rutas
 │   └── visualization/
-│       └── visualize.py             # Visualizaciones
-│
-├── main.py                          # Punto de entrada principal
-├── pyproject.toml                   # Dependencias del proyecto
-├── setup.py                         # Configuración de instalación
-└── README.md                        # Este archivo
+│       └── visualize.py          # Generación de gráficos
+├── main.py                       # Punto de entrada
+├── pyproject.toml                # Metadatos del proyecto y dependencias
+└── README.md
 ```
 
 ---
 
-## Solución propuesta
+## Modelos evaluados
 
-El enfoque principal es **aprendizaje supervisado**, donde entrenamos modelos con datos etiquetados (clientes que han abandonado o permanecido) para que aprendan patrones predictivos.  
+| Modelo | Notas |
+|---|---|
+| Logistic Regression | Baseline; probabilidades calibradas |
+| Decision Tree | Interpretable; captura divisiones no lineales |
+| Random Forest | Mejor rendimiento; robusto frente al overfitting |
+| K-Nearest Neighbours | Basado en similitud; sensible al escalado |
 
-### Modelos considerados
-
-Para evaluar y seleccionar el mejor modelo, se probarán distintos algoritmos supervisados:
-
-- **Logistic Regression:** proporciona probabilidades explícitas y sirve como baseline.  
-- **Decision Tree:** captura relaciones no lineales entre variables y es interpretable.  
-- **Random Forest:** ensemble robusto que reduce overfitting y mejora precisión.  
-- **K-Nearest Neighbors (KNN):** modelo simple basado en similitud entre clientes.  
-
-### Métricas de evaluación
-
-- **Clasificación binaria:** Accuracy, Precision, Recall, F1-score.  
-- **Probabilidades de churn:** ROC-AUC, Log Loss o Brier Score para evaluar la calidad de las probabilidades.  
-
-## Resultados del Modelo
-
-Después de evaluar varios algoritmos (Logistic Regression, Random Forest, XGBoost), estos son los resultados obtenidos con el modelo final:
-
-| Métrica       | Valor  | Descripción |
-| :------------ | :----: | :---------- |
-| **Accuracy** | 0.81   | Precisión global del modelo. |
-| **Precision** | 0.65   | Capacidad de no marcar como fuga a un cliente leal. |
-| **Recall** | 0.72   | Capacidad de detectar a los clientes que realmente se van. |
-| **F1-Score** | 0.68   | Balance entre precisión y recall. |
-| **AUC-ROC** | 0.84   | Capacidad de distinción entre clases. |
-
-### Insights del modelo:
-
-Las variables más importantes según el modelo son: tenure, payment_delay y subscription_type. Esto indica que la antigüedad y los retrasos en pagos son los factores más determinantes para churn.
-
-Clientes con pagos atrasados frecuentes y contratos más cortos tienen mayor riesgo de abandonar.
-
-Este análisis permite priorizar estrategias de retención, enfocándose en clientes con alto riesgo según estas variables clave.
-### Visualización Clave
-![Análisis de Importancia de Variables y Resultados](data/processed/image.png)
----
-
-## Pipeline del proyecto
-
-1. **Exploración de datos:** análisis de distribuciones, valores faltantes y correlaciones (`pandas`, `seaborn`, `missingno`).  
-2. **Preprocesamiento:** limpieza, codificación de variables categóricas, escalado de features, imputación de faltantes.  
-3. **División train/test** y validación cruzada para asegurar robustez.  
-4. **Entrenamiento de modelos supervisados** y comparación de desempeño.  
-5. **Selección del modelo final** según métricas y calibración de probabilidades.  
-6. **Interpretación de resultados:** importancia de features, identificación de clientes con alto riesgo de churn.  
+El mejor modelo según AUC-ROC se guarda automáticamente y se carga en ejecuciones posteriores.
 
 ---
 
-## Tecnologías y librerías
+## Pipeline
 
-- **Python ≥ 3.11**  
-- **Análisis y visualización de datos:** `pandas`, `numpy`, `matplotlib`, `seaborn`, `plotly`  
-- **Machine Learning:** `scikit-learn`, `lightgbm`, `xgboost`, `keras`, `tensorflow`  
-- **Exploración de datos faltantes y limpieza:** `pyjanitor`, `missingno`  
+1. **Exploración de datos** — distribuciones, valores faltantes, correlaciones (`pandas`, `seaborn`, `missingno`).
+2. **Preprocesamiento** — codificación de variables categóricas, escalado de features, imputación de faltantes.
+3. **División train / test** con estratificación y validación cruzada.
+4. **Entrenamiento y comparación** de cuatro algoritmos supervisados.
+5. **Selección del mejor modelo** por AUC-ROC; persistido en `models/`.
+6. **Inferencia** — CLI interactivo que valida entradas y devuelve una probabilidad de abandono.
+
+---
+
+## Tecnologías
+
+| Capa | Librerías |
+|---|---|
+| Datos | `pandas`, `numpy`, `pyjanitor`, `missingno` |
+| Visualización | `matplotlib`, `seaborn`, `plotly` |
+| Machine learning | `scikit-learn`, `lightgbm`, `xgboost` |
+| Serialización | `joblib` |
+| Tests | `pytest` |
+| Herramientas | `black`, `pylint`, `uv` |
+
+---
+
+## Desarrollo
+
+```bash
+# Instalar con extras de desarrollo
+pip install -e ".[dev]"
+
+# Ejecutar tests
+pytest tests/ -v
+
+# Formatear código
+black .
+```
+
+---
+
+## Licencia
+
+MIT — consulta el archivo [LICENSE](LICENSE) para más detalles.V
