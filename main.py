@@ -1,159 +1,221 @@
 import sys
-import os
+import logging
 import joblib
 import pandas as pd
+from pathlib import Path
 
-# Importamos las rutas y funciones de tu proyecto
 from tasa_churn.utils.paths import MODELS_DIR, ARTIFACTS_DIR
 from tasa_churn.data.make_dataset import load_data
 from tasa_churn.features.build_features import preprocess_data, process_input
 from tasa_churn.models.train_model import train_models
 from tasa_churn.models.predict_model import evaluate_models
 
-# Nombre del modelo que vamos a usar
-MODEL_NAME = "RandomForest.joblib" 
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
 
-def check_is_trained():
-    """Verifica si existen el modelo y los archivos de traducción (encoders)."""
-    model_path = MODELS_DIR / MODEL_NAME
-    # Verificamos también que existan los codificadores (necesarios para traducir inputs)
-    artifacts_exist = (ARTIFACTS_DIR / "encoders.joblib").exists()
-    return model_path.exists() and artifacts_exist
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+BEST_MODEL_RECORD = MODELS_DIR / "best_model.txt"
+TRAINING_FILE = "customer_churn_dataset-training-master.csv"
 
-def ask_user_data():
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_best_model_name() -> str:
+    """Returns the filename of the best model saved during training."""
+    if BEST_MODEL_RECORD.exists():
+        name = BEST_MODEL_RECORD.read_text().strip()
+        if name:
+            return name
+    # Fallback: pick any .joblib in MODELS_DIR that isn't an artifact
+    candidates = [
+        p.name for p in MODELS_DIR.glob("*.joblib")
+        if "artifact" not in p.name.lower()
+    ]
+    if candidates:
+        return candidates[0]
+    return "RandomForest.joblib"
+
+
+def is_trained() -> bool:
+    """Returns True when a trained model and its artifacts are present."""
+    model_name = get_best_model_name()
+    model_ok = (MODELS_DIR / model_name).exists()
+    artifacts_ok = (ARTIFACTS_DIR / "encoders.joblib").exists()
+    return model_ok and artifacts_ok
+
+
+def load_artifacts() -> tuple:
     """
-    Pide los datos al usuario de forma interactiva y SEGURA.
-    No permite avanzar si el dato no es válido.
+    Loads encoders, scaler config and column order from disk once.
+    Returns (columns, encoders).
+    Raises SystemExit on missing files so the caller does not need to handle it.
     """
-    print("\n" + "="*40)
-    print("   RIESGO DE CHURN - PREDICCIÓN")
-    print("="*40)
-    
     try:
         columns = joblib.load(ARTIFACTS_DIR / "columns.joblib")
         encoders = joblib.load(ARTIFACTS_DIR / "encoders.joblib")
-    except FileNotFoundError:
-        print(" Error: Faltan archivos de entrenamiento.")
-        print("   Por favor, borra la carpeta 'models' y ejecuta de nuevo para re-entrenar.")
+        return columns, encoders
+    except FileNotFoundError as exc:
+        logger.error("Artifact not found: %s", exc)
+        logger.error("Delete the 'models/' folder and re-run to retrain.")
         sys.exit(1)
-    
-    user_data = {}
-    
+
+
+def ask_user_data(columns: list, encoders: dict) -> dict | None:
+    """
+    Prompts the user for each feature interactively with strict validation.
+    Returns a dict of {column: value}, or None if the user aborts with Ctrl-C.
+    """
+    print("\n" + "=" * 42)
+    print("   CHURN RISK PREDICTION")
+    print("=" * 42)
+
+    user_data: dict = {}
+
     for col in columns:
-        # --- CASO A: Columna de TEXTO (Categoría) ---
+        # --- Categorical column ---
         if col in encoders:
             encoder = encoders[col]
-            
-            # Obtener opciones válidas según el tipo de encoder
-            if hasattr(encoder, 'classes_'):
-                # Es un LabelEncoder
+
+            if hasattr(encoder, "classes_"):
                 valid_options = list(encoder.classes_)
             elif isinstance(encoder, dict):
-                # Es un diccionario de mapeo
                 valid_options = list(encoder.keys())
             else:
-                print(f" Advertencia: Encoder desconocido para '{col}'. Saltando...")
+                logger.warning("Unknown encoder type for column '%s'. Skipping.", col)
                 continue
-            
-            print(f"\n🔹 Dato: {col.upper()}")
-            print(f"   Opciones válidas: {', '.join(valid_options)}")
-            
+
+            print(f"\n  {col.upper()}")
+            print(f"  Options: {', '.join(valid_options)}")
+
             while True:
-                val = input(f"     Escribe una opción: ").strip()
-                
-                # Validación: puede ser case-insensitive para los diccionarios
+                val = input("  > ").strip()
                 if isinstance(encoder, dict):
-                    # Para diccionarios, aceptamos cualquier capitalización
                     if val.title() in valid_options or val in valid_options:
                         user_data[col] = val
                         break
                 else:
-                    # Para LabelEncoder, debe coincidir exactamente
                     if val in valid_options:
                         user_data[col] = val
                         break
-                
-                print(f"     Valor incorrecto. Copia exactamente una de las opciones de arriba.")
+                print("  Invalid value. Choose one of the options above.")
 
-        # --- CASO B: Columna NUMÉRICA (Edad, Dinero, etc) ---
+        # --- Numeric column ---
         else:
-            print(f"\n🔹 Dato: {col.upper()}")
+            print(f"\n  {col.upper()}")
             while True:
-                val = input(f"     Introduce un número: ").strip()
+                val = input("  > ").strip()
                 try:
-                    # Intentamos convertir a número
-                    float_val = float(val)
-                    user_data[col] = float_val
+                    user_data[col] = float(val)
                     break
                 except ValueError:
-                    print("     Eso no es un número válido. Inténtalo de nuevo.")
-    
+                    print("  Not a valid number. Try again.")
+
     return user_data
-def main():
-    # 1. Comprobar si hay que entrenar
-    if not check_is_trained():
-        print(">>> Modelo no encontrado. Iniciando entrenamiento...")
-        try:
-            # IMPORTANTE: Asegúrate de que 'credit-train.csv' (con columna 'y') está en data/raw/
-            df = load_data("customer_churn_dataset-training-master.csv") 
-            
-            # Preprocesamos y guardamos los artefactos (encoders)
-            X_train, X_test, y_train, y_test = preprocess_data(df, target_col='Churn', save_artifacts=True)
-            
-            # Entrenamos
-            models = train_models(X_train, y_train)
-            evaluate_models(models, X_test, y_test)
-            print(">>> Entrenamiento finalizado.")
-        except Exception as e:
-            print(f" Error fatal durante el entrenamiento: {e}")
-            return
+
+
+def display_result(prediction: int, probs: list) -> None:
+    """Prints the churn prediction result in a consistent format."""
+    prob_churn = probs[1] if len(probs) > 1 else 0.0
+    prob_stable = probs[0] if len(probs) > 0 else 0.0
+
+    print("\n" + "-" * 42)
+    if prediction == 1:
+        print(f"  HIGH CHURN RISK  (probability: {prob_churn:.1%})")
     else:
-        print(">>> Modelo cargado correctamente.")
+        print(f"  LOW RISK — stable client  (confidence: {prob_stable:.1%})")
+    print("-" * 42 + "\n")
 
-    # 2. Cargar el modelo ya entrenado
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+
+def run_training() -> None:
+    """Loads data, preprocesses, trains models and saves the best one."""
+    logger.info("No trained model found. Starting training pipeline...")
     try:
-        model = joblib.load(MODELS_DIR / MODEL_NAME)
-    except FileNotFoundError:
-        print(f" No se pudo cargar el modelo {MODEL_NAME}.")
-        return
+        df = load_data(TRAINING_FILE)
+        X_train, X_test, y_train, y_test = preprocess_data(
+            df, target_col="Churn", save_artifacts=True
+        )
+        models = train_models(X_train, y_train)
+        best_name = evaluate_models(models, X_test, y_test)
 
-    # 3. Bucle infinito para pedir datos
+        # Persist the name of the winner so main always loads the right file
+        if best_name:
+            BEST_MODEL_RECORD.write_text(best_name)
+            logger.info("Best model: %s", best_name)
+
+        logger.info("Training complete.")
+    except Exception:
+        logger.exception("Fatal error during training.")
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    if not is_trained():
+        run_training()
+    else:
+        logger.info("Trained model found. Skipping training.")
+
+    model_name = get_best_model_name()
+    model_path = MODELS_DIR / model_name
+
+    try:
+        model = joblib.load(model_path)
+        logger.info("Model loaded: %s", model_name)
+    except FileNotFoundError:
+        logger.error("Model file not found: %s", model_path)
+        sys.exit(1)
+
+    # Load artifacts once, reuse across all predictions in the session
+    columns, encoders = load_artifacts()
+
     while True:
         try:
-            # Pedir datos (ahora con validación robusta)
-            raw_data = ask_user_data()
-            if not raw_data: break 
-
-            # Procesar (convertir texto a números y escalar)
-            processed_data = process_input(raw_data)
-            
-            # Predecir
-            prediction = model.predict(processed_data)[0]
-            
-            # Intentar sacar probabilidad si el modelo lo soporta
-            probs = model.predict_proba(processed_data)[0] if hasattr(model, "predict_proba") else [0,0]
-            prob_yes = probs[1] if len(probs) > 1 else 0
-
-            # Mostrar resultado
-            print("\n" + "-"*30)
-            if prediction == 1:
-                print(f" RIESGO DE CHURN ALTO (Probabilidad: {prob_yes:.1%})")
-            else:
-                print(f" Cliente estable (Riesgo bajo - Confianza NO churn: {probs[0]:.1%})")
-            print("-"*30 + "\n")
-
-            
-            # ¿Otra vez?
-            if input("¿Evaluar otro cliente? (s/n): ").lower() != 's':
-                print("Cerrando programa...")
+            raw_data = ask_user_data(columns, encoders)
+            if not raw_data:
                 break
-                
+
+            processed = process_input(raw_data)
+            prediction = model.predict(processed)[0]
+            probs = (
+                model.predict_proba(processed)[0]
+                if hasattr(model, "predict_proba")
+                else [0.0, 0.0]
+            )
+
+            display_result(prediction, list(probs))
+
+            answer = input("Evaluate another client? (y/n): ").strip().lower()
+            if answer != "y":
+                logger.info("Session closed.")
+                break
+
         except KeyboardInterrupt:
-            print("\nSaliendo...")
+            print("\nInterrupted.")
             break
-        except Exception as e:
-            print(f" Ocurrió un error inesperado: {e}")
+        except ValueError as exc:
+            # Validation errors should not kill the session
+            logger.warning("Input error: %s — please try again.", exc)
+        except Exception:
+            logger.exception("Unexpected error.")
             break
+
 
 if __name__ == "__main__":
     main()
