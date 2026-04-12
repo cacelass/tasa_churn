@@ -1,50 +1,58 @@
 [project]
-name = "tasa_churn"
-version = "0.1.0"
-description = "A short description of the project."
+name = "retainml"
+version = "0.2.0"
+description = "Supervised ML system that predicts customer churn probability from demographic, usage and interaction data."
 authors = [
-  { name = "Alejandro Cancelas Chapela" }
+    { name = "Alejandro Cancelas Chapela" }
 ]
 readme = "README.md"
-requires-python = ">= 3.12"
-license = { text = "" }
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Core runtime dependencies (everything needed to train and predict)
 dependencies = [
     "numpy",
     "pandas",
     "matplotlib",
     "seaborn",
     "plotly",
-    "jupyter",
-    "jupyterlab",
-    "sphinx",
-    "pytest>=9.0.2",
+    "scikit-learn",
+    "lightgbm",
+    "xgboost",
+    "joblib",
+    "pyjanitor",
+    "missingno",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
+# Install with: pip install -e ".[dev]"
 dev = [
     "black",
+    "pylint",
+    "pytest>=9.0",
     "invoke",
     "nbdime",
-    "pylint",
-    "pytest",
 ]
-
-ml = [
-    "scikit-learn",
-    "keras",
-    "tensorflow",
-    "lightgbm",
+# Install with: pip install -e ".[notebooks]"
+notebooks = [
+    "jupyter",
+    "jupyterlab",
     "statsmodels",
-    "pyjanitor",
-    "pandas-flavor",
-    "pyspark",
-    "python-dotenv",
-    "missingno",
 ]
 
-[tool.setuptools]
-packages = ["tasa_churn"]
+[tool.setuptools.packages.find]
+# Automatically discover the tasa_churn package and sub-packages
+where = ["."]
+include = ["tasa_churn*"]
 
 [build-system]
 requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
